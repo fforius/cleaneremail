@@ -1,0 +1,231 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Email Password Formatter</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      font-family: Arial, sans-serif;
+    }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      background: #f4f6f8;
+      color: #222;
+      padding: 24px;
+    }
+
+    .container {
+      max-width: 900px;
+      margin: 0 auto;
+      background: #fff;
+      border-radius: 14px;
+      box-shadow: 0 10px 30px rgba(0, 0, 0, 0.08);
+      padding: 22px;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: 24px;
+    }
+
+    .desc {
+      margin: 0 0 20px;
+      color: #666;
+      line-height: 1.5;
+    }
+
+    .grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 18px;
+    }
+
+    label {
+      display: block;
+      font-weight: 700;
+      margin-bottom: 8px;
+    }
+
+    textarea,
+    pre {
+      width: 100%;
+      min-height: 360px;
+      border: 1px solid #d6dbe1;
+      border-radius: 10px;
+      padding: 14px;
+      font-size: 14px;
+      line-height: 1.6;
+      background: #fbfcfd;
+      white-space: pre-wrap;
+      word-break: break-word;
+    }
+
+    textarea {
+      resize: vertical;
+      outline: none;
+    }
+
+    textarea:focus {
+      border-color: #4f8cff;
+      box-shadow: 0 0 0 3px rgba(79, 140, 255, 0.15);
+    }
+
+    pre {
+      margin: 0;
+      overflow: auto;
+    }
+
+    .actions {
+      display: flex;
+      justify-content: flex-end;
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    button {
+      border: 0;
+      border-radius: 9px;
+      padding: 10px 14px;
+      cursor: pointer;
+      font-weight: 700;
+      background: #2563eb;
+      color: white;
+    }
+
+    button.secondary {
+      background: #e5e7eb;
+      color: #111827;
+    }
+
+    .status {
+      min-height: 20px;
+      margin-top: 8px;
+      color: #16a34a;
+      font-size: 14px;
+      text-align: right;
+    }
+
+    @media (max-width: 760px) {
+      .grid {
+        grid-template-columns: 1fr;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Email Password Formatter</h1>
+    <p class="desc">
+      Paste data di kiri. Hasil akan otomatis berubah realtime menjadi satu baris per akun, lalu bisa langsung dicopy.
+    </p>
+
+    <div class="grid">
+      <div>
+        <label for="inputText">Input</label>
+        <textarea id="inputText" placeholder="Paste format seperti ini:
+〔 *PRODUCT DETAIL* 〕
+1. Email: rumthb@blabla.id
+- Password: Premium@123"></textarea>
+      </div>
+
+      <div>
+        <label for="outputText">Hasil</label>
+        <pre id="outputText"></pre>
+        <div class="actions">
+          <button class="secondary" id="clearBtn">Clear</button>
+          <button id="copyBtn">Copy Hasil</button>
+        </div>
+        <div class="status" id="statusText"></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    const inputText = document.getElementById('inputText');
+    const outputText = document.getElementById('outputText');
+    const copyBtn = document.getElementById('copyBtn');
+    const clearBtn = document.getElementById('clearBtn');
+    const statusText = document.getElementById('statusText');
+
+    function formatAccounts(text) {
+      const lines = text
+        .split(/\r?\n/)
+        .map(line => line.trim())
+        .filter(line => line && !line.includes('PRODUCT DETAIL'));
+
+      const results = [];
+      let currentNumber = null;
+      let currentEmail = null;
+
+      for (const line of lines) {
+        const emailMatch = line.match(/^(\d+)\s*[.)-]?\s*Email\s*:\s*(.+)$/i);
+        const passwordMatch = line.match(/^-?\s*Password\s*:\s*(.+)$/i);
+
+        if (emailMatch) {
+          currentNumber = emailMatch[1];
+          currentEmail = emailMatch[2].trim();
+          continue;
+        }
+
+        if (passwordMatch && currentNumber && currentEmail) {
+          const password = passwordMatch[1].trim();
+          results.push(`${currentNumber}. Email: ${currentEmail} - Password: ${password}`);
+          currentNumber = null;
+          currentEmail = null;
+        }
+      }
+
+      return results.join('\n');
+    }
+
+    function updateOutput() {
+      outputText.textContent = formatAccounts(inputText.value);
+      statusText.textContent = '';
+    }
+
+    inputText.addEventListener('input', updateOutput);
+
+    copyBtn.addEventListener('click', async () => {
+      const result = outputText.textContent.trim();
+
+      if (!result) {
+        statusText.textContent = 'Belum ada hasil untuk dicopy.';
+        return;
+      }
+
+      try {
+        await navigator.clipboard.writeText(result);
+        statusText.textContent = 'Hasil berhasil dicopy!';
+      } catch (error) {
+        const tempTextarea = document.createElement('textarea');
+        tempTextarea.value = result;
+        document.body.appendChild(tempTextarea);
+        tempTextarea.select();
+        document.execCommand('copy');
+        document.body.removeChild(tempTextarea);
+        statusText.textContent = 'Hasil berhasil dicopy!';
+      }
+    });
+
+    clearBtn.addEventListener('click', () => {
+      inputText.value = '';
+      updateOutput();
+      inputText.focus();
+    });
+
+    inputText.value = `〔 *PRODUCT DETAIL* 〕
+1. Email: rumthb@blabla.id
+- Password: Premium@123
+2. Email: roedne@blabla.id
+- Password: Premium@123
+3. Email: jjonjo@blabla.id
+- Password: Premium@123`;
+
+    updateOutput();
+  </script>
+</body>
+</html>
